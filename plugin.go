@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -45,17 +46,18 @@ type (
 	}
 
 	Config struct {
-		Webhook   string
-		Channel   string
-		Recipient string
-		Username  string
-		Template  string
-		Fallback  string
-		ImageURL  string
-		IconURL   string
-		IconEmoji string
-		Color     string
-		LinkNames bool
+		Webhook        string
+		Channel        string
+		Recipient      string
+		Username       string
+		Template       string
+		FieldsTemplate string
+		Fallback       string
+		ImageURL       string
+		IconURL        string
+		IconEmoji      string
+		Color          string
+		LinkNames      bool
 	}
 
 	Job struct {
@@ -131,6 +133,18 @@ func (p Plugin) Exec() error {
 		}
 	} else {
 		attachment.Text = message(p.Repo, p.Build)
+	}
+
+	if p.Config.FieldsTemplate != "" {
+		s, err := templateMessage(fmt.Sprintf(`{"Fields": %s}`, p.Config.FieldsTemplate), p)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal([]byte(s), &attachment)
+		if err != nil {
+			return err
+		}
 	}
 
 	client := slack.NewWebHook(p.Config.Webhook)

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
+	"github.com/bluele/slack"
 	"gotest.tools/assert"
 )
 
@@ -81,6 +84,21 @@ Message body`
 	assert.Equal(t, expectedMessage, msg)
 }
 
+func TestTemplateFields(t *testing.T) {
+	plugin := getTestPlugin()
+	attachment := slack.Attachment{}
+
+	fields, err := templateMessage(fmt.Sprintf(`{"Fields": %s}`, plugin.Config.FieldsTemplate), plugin)
+	assert.NilError(t, err, "should create fields by template without error")
+
+	expectedFieldsTemplate := `{"Fields": [{"title": "success", "short": true, "value": "master"}]}`
+	assert.Equal(t, expectedFieldsTemplate, fields)
+
+	err = json.Unmarshal([]byte(fields), &attachment)
+	assert.NilError(t, err, "should parse json without error")
+	assert.Check(t, len(attachment.Fields) > 0)
+}
+
 func TestTemplateFallbackMessage(t *testing.T) {
 	plugin := getTestPlugin()
 
@@ -146,8 +164,11 @@ func getTestConfig() Config {
 {{build.branch}}
 {{build.status}}`
 
+	ft := `[{"title": "{{build.status}}", "short": true, "value": "{{build.branch}}"}]`
+
 	return Config{
-		Template: t,
-		Fallback: tf,
+		Template:       t,
+		Fallback:       tf,
+		FieldsTemplate: ft,
 	}
 }
